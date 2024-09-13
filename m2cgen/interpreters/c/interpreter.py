@@ -43,7 +43,12 @@ class CInterpreter(ImperativeToCodeInterpreter,
         self._cg.reset_state()
         self._reset_reused_expr_cache()
 
-        args = [(True, self._feature_array_name)]
+        if self.feature_types is None or self.feature_names is None:
+            args = [(True, ("double", self._feature_array_name))]
+        else:
+            args = []
+            for ftype, fname in zip(self.feature_types, self.feature_names):
+                args.append((False, (ftype, fname)))
 
         # C doesn't allow returning vectors, so if model returns vector we will
         # have additional vector argument which we will populate at the end.

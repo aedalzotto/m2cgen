@@ -13,6 +13,11 @@ class BaseBoostingAssembler(ModelAssembler):
 
     classifier_names = {}
     multiclass_params_seq_len = 1
+    types = {
+        "float": np.float32,
+        "int": np.int32,
+        "bool": np.int32
+    }
 
     def __init__(self, model, estimator_params, base_score=0.0):
         super().__init__(model)
@@ -130,9 +135,16 @@ class XGBoostTreeModelAssembler(BaseTreeBoostingAssembler):
 
     def __init__(self, model):
         self.multiclass_params_seq_len = model.get_params().get("num_parallel_tree", 1)
-        feature_names = model.get_booster().feature_names
+        self._feature_names = model.get_booster().feature_names
+        self._feature_types = model.get_booster().feature_types
+        for i, ftype in enumerate(self._feature_types):
+            if ftype == "q":
+                self._feature_types[i] = "float"
+            elif ftype == "i":
+                self._feature_types[i] = "bool"
+
         self._feature_name_to_idx = {
-            name: idx for idx, name in enumerate(feature_names or [])
+            name: idx for idx, name in enumerate(self._feature_names or [])
         }
 
         model_dump = model.get_booster().get_dump(dump_format="json")
@@ -151,7 +163,6 @@ class XGBoostTreeModelAssembler(BaseTreeBoostingAssembler):
         if "leaf" in tree:
             return ast.NumVal(tree["leaf"], dtype=np.float32)
 
-        threshold = ast.NumVal(tree["split_condition"], dtype=np.float32)
         split = tree["split"]
         if split in self._feature_name_to_idx:
             feature_idx = self._feature_name_to_idx[split]
@@ -161,11 +172,25 @@ class XGBoostTreeModelAssembler(BaseTreeBoostingAssembler):
             feature_idx = int(split)
         feature_ref = ast.FeatureRef(feature_idx)
 
+        # For "indicator" type: a boolean with no threshold (1 threshold)
+        feature_type = self._feature_types[feature_idx]
+        if feature_type == "bool":
+            threshold_val = 1
+            use_eq_comp = True
+        else:
+            threshold_val = tree["split_condition"]
+            use_lt_comp = tree["missing"] == tree["no"]
+            use_eq_comp = False
+        threshold = ast.NumVal(threshold_val, dtype=super().types[feature_type])
+
         # Since comparison with NaN (missing) value always returns false we
         # should make sure that the node ID specified in the "missing" field
         # always ends up in the "else" branch of the ast.IfExpr.
-        use_lt_comp = tree["missing"] == tree["no"]
-        if use_lt_comp:
+        if use_eq_comp:
+            comp_op = ast.CompOpType.EQ
+            true_child_id = tree["yes"]
+            false_child_id = tree["no"]
+        elif use_lt_comp:
             comp_op = ast.CompOpType.LT
             true_child_id = tree["yes"]
             false_child_id = tree["no"]
@@ -184,6 +209,12 @@ class XGBoostTreeModelAssembler(BaseTreeBoostingAssembler):
             if child["nodeid"] == child_id:
                 return self._assemble_tree(child)
         assert False, f"Unexpected child ID: {child_id}"
+
+    def get_feature_types(self):
+        return self._feature_types
+
+    def get_feature_names(self):
+        return self._feature_names
 
 
 class XGBoostLinearModelAssembler(BaseBoostingAssembler):
@@ -212,6 +243,12 @@ class XGBoostModelAssemblerSelector(ModelAssembler):
 
     def assemble(self):
         return self.assembler.assemble()
+
+    def get_feature_types(self):
+        return self.assembler.get_feature_types()
+
+    def get_feature_names(self):
+        return self.assembler.get_feature_names()
 
 
 class LightGBMModelAssembler(BaseTreeBoostingAssembler):

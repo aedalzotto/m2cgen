@@ -8,14 +8,13 @@ class CCodeGenerator(CLikeCodeGenerator):
     tpl_scalar_var_declare = CodeTemplate("double {var_name};")
     tpl_vector_var_declare = CodeTemplate("double {var_name}[{size}];")
 
-    scalar_type = "double"
-    vector_type = "double *"
+    scalar_type = ""
+    vector_type = "*"
 
     def add_function_def(self, name, args, is_scalar_output):
         return_type = self.scalar_type if is_scalar_output else "void"
-
         func_args = ", ".join([
-            f"{self._get_var_declare_type(is_vector)} {n}"
+            f"{n[0]}{self._get_var_declare_type(is_vector)} {n[1]}"
             for is_vector, n in args])
         function_def = f"{return_type} {name}({func_args}) {{"
         self.add_code_line(function_def)

@@ -456,5 +456,8 @@ def export_to_elixir(model, module_name="Model", indent=4,
 
 def _export(model, interpreter):
     assembler_cls = get_assembler_cls(model)
-    model_ast = assembler_cls(model).assemble()
+    assembler = assembler_cls(model)
+    model_ast = assembler.assemble()
+    interpreter.feature_types = assembler.get_feature_types()
+    interpreter.feature_names = assembler.get_feature_names()
     return interpreter.interpret(model_ast)

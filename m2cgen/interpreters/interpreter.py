@@ -14,6 +14,8 @@ class BaseInterpreter:
     """
     def __init__(self):
         self._cached_expr_results = {}
+        self.feature_types = None
+        self.feature_names = None
 
     def interpret(self, expr):
         self._reset_reused_expr_cache()
@@ -164,9 +166,12 @@ class ToCodeInterpreter(BaseToCodeInterpreter):
         return self._cg.num_value(value=expr.value)
 
     def interpret_feature_ref(self, expr, **kwargs):
-        return self._cg.array_index_access(
-            array_name=self._feature_array_name,
-            index=expr.index)
+        if self.feature_names is None:
+            return self._cg.array_index_access(
+                array_name=self._feature_array_name,
+                index=expr.index)
+        else:
+            return self.feature_names[expr.index]
 
     def interpret_vector_val(self, expr, **kwargs):
         self.with_vectors = True
