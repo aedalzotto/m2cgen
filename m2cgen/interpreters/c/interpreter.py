@@ -44,7 +44,7 @@ class CInterpreter(ImperativeToCodeInterpreter,
         self._reset_reused_expr_cache()
 
         if self.feature_types is None or self.feature_names is None:
-            args = [(True, ("double", self._feature_array_name))]
+            args = [(True, ("float", self._feature_array_name))]
         else:
             args = []
             for ftype, fname in zip(self.feature_types, self.feature_names):

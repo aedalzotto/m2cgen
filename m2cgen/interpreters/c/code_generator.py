@@ -5,11 +5,11 @@ from m2cgen.interpreters.code_generator import CLikeCodeGenerator, CodeTemplate
 
 class CCodeGenerator(CLikeCodeGenerator):
 
-    tpl_scalar_var_declare = CodeTemplate("double {var_name};")
-    tpl_vector_var_declare = CodeTemplate("double {var_name}[{size}];")
+    tpl_scalar_var_declare = CodeTemplate("float {var_name};")
+    tpl_vector_var_declare = CodeTemplate("float {var_name}[{size}];")
 
-    scalar_type = ""
-    vector_type = "*"
+    scalar_type = "float"
+    vector_type = "float*"
 
     def add_function_def(self, name, args, is_scalar_output):
         return_type = self.scalar_type if is_scalar_output else "void"
@@ -47,13 +47,13 @@ class CCodeGenerator(CLikeCodeGenerator):
 
     def add_assign_array_statement(self, source_var, target_var, size):
         self.add_code_line(f"memcpy({target_var}, {source_var}, "
-                           f"{size} * sizeof(double));")
+                           f"{size} * sizeof(float));")
 
     def add_dependency(self, dep):
         self.prepend_code_line(f"#include {dep}")
 
     def vector_init(self, values):
-        return f"(double[]){{{', '.join(values)}}}"
+        return f"(float[]){{{', '.join(values)}}}"
 
     def _get_var_declare_type(self, is_vector):
         return self.vector_type if is_vector else self.scalar_type
