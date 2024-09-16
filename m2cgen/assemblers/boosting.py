@@ -187,7 +187,7 @@ class XGBoostTreeModelAssembler(BaseTreeBoostingAssembler):
         # should make sure that the node ID specified in the "missing" field
         # always ends up in the "else" branch of the ast.IfExpr.
         if use_eq_comp:
-            comp_op = ast.CompOpType.EQ
+            comp_op = ast.CompOpType.NOT_EQ
             true_child_id = tree["yes"]
             false_child_id = tree["no"]
         elif use_lt_comp:
